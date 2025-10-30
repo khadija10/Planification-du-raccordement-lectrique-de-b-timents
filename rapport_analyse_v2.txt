@@ -1,0 +1,19 @@
+=== RAPPORT D’ANALYSE DU RÉSEAU (V2) ===
+
+Total de connexions : 6107
+
+Infrastructures intactes : 5530
+Infrastructures à remplacer : 577
+
+Longueur moyenne : 29.31 m
+Nombre moyen de maisons par bâtiment : 1.02
+
+--- Corrélations ---
+            nb_maisons  longueur
+nb_maisons    1.000000  0.015997
+longueur      0.015997  1.000000
+
+--- Interprétation ---
+Les résultats montrent que les infrastructures à remplacer représentent environ 9.4% du réseau total.
+Le réseau est majoritairement constitué de lignes courtes (< 50 m), typiques de raccordements de proximité.
+Une faible corrélation est observée entre la longueur et le nombre de maisons (cela suggère que la taille de la ligne n’impacte pas fortement le nombre de foyers raccordés).
