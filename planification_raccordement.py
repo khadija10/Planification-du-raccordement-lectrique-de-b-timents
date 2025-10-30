@@ -18,90 +18,16 @@ plt.style.use('default')
 sns.set_palette("husl")
 plt.rcParams['figure.figsize'] = (12, 8)
 
-# def analyser_shapefiles():
-#     print("=" * 60)
-#     print("1. ANALYSE DES SHAPEFILES")
-#     print("=" * 60)
-
-#     try:
-#         # Chargement des shapefiles
-#         batiments_gdf = gpd.read_file('batiments.shp')
-#         infrastructures_gdf = gpd.read_file('infrastructures.shp')
-#         print()
-
-#         # Analyse des bâtiments
-#         print("ANALYSE DES BÂTIMENTS")
-#         print("-" * 30)
-#         print(f"Nombre total de bâtiments : {len(batiments_gdf)}")
-#         print(f"Système de coordonnées : {batiments_gdf.crs}")
-#         print(f"Colonnes disponibles : {list(batiments_gdf.columns)}")
-#         print(batiments_gdf.head())
-#         print()
-
-#         # Statistiques des bâtiments
-#         print("Statistiques des bâtiments :")
-#         batiments_stats = batiments_gdf.groupby('nb_maisons').size()
-#         for nb_maisons, count in batiments_stats.items():
-#             print(f"  - {count} bâtiments avec {nb_maisons} maison(s)")
-#         print()
-
-#         # Analyse des infrastructures
-#         print("ANALYSE DES INFRASTRUCTURES ÉLECTRIQUES")
-#         print("-" * 45)
-#         print(f"Nombre total d'infrastructures : {len(infrastructures_gdf)}")
-#         print(f"Système de coordonnées : {infrastructures_gdf.crs}")
-#         print(f"Colonnes disponibles : {list(infrastructures_gdf.columns)}")
-#         print(infrastructures_gdf.head())
-#         print()
-
-#         # Visualisation géographique
-#         print("VISUALISATION GÉOGRAPHIQUE")
-#         print("-" * 35)
-
-#         fig, axes = plt.subplots(1, 2, figsize=(20, 8))
-
-#         # Carte des bâtiments
-#         batiments_gdf.plot(ax=axes[0], color='lightblue', alpha=0.7, edgecolor='navy')
-#         axes[0].set_title('Disposition géographique des bâtiments')
-#         axes[0].set_xlabel('Longitude')
-#         axes[0].set_ylabel('Latitude')
-
-#         # Carte des infrastructures
-#         infrastructures_gdf.plot(ax=axes[1], color='orange', linewidth=2, alpha=0.8)
-#         axes[1].set_title('Réseau électrique existant')
-#         axes[1].set_xlabel('Longitude')
-#         axes[1].set_ylabel('Latitude')
-
-#         plt.tight_layout()
-#         plt.savefig('analyse_shapefiles.png', dpi=300, bbox_inches='tight')
-#         plt.show()
-
-#         print("Carte sauvegardée : 'analyse_shapefiles.png'")
-#         print()
-
-#         return batiments_gdf, infrastructures_gdf
-
-#     except Exception as e:
-#         print(f"Erreur lors du chargement des shapefiles : {e}")
-#         return None, None    
-
-
-
-#     except Exception as e:
-#         print(f"Erreur lors du chargement du fichier CSV : {e}")
-#         return None
-    
-
 def analyser_csv():
-    print("2. ANALYSE DU FICHIER EXCEL MIS À JOUR")
+    print("ANALYSE DU FICHIER EXCEL MIS À JOUR")
     print("=" * 70)
 
     try:
-        # --- Chargement du fichier Excel
+        # --- Chargement du fichier Excel ---
         df = pd.read_excel('reseau_en_arbre_updated.xlsx')
         print("Fichier Excel chargé avec succès\n")
 
-        # --- Vérification des colonnes
+        # --- Vérification des colonnes ---
         colonnes_attendues = [
             'id_batiment', 'type_batiment', 'nb_maisons',
             'infra_id', 'infra_type', 'type_infra', 'longueur'
@@ -109,336 +35,33 @@ def analyser_csv():
         if not all(col in df.columns for col in colonnes_attendues):
             raise ValueError("Colonnes manquantes dans le fichier Excel !")
 
-        # --- Statistiques générales
-        print("STATISTIQUES GÉNÉRALES")
-        print("-" * 40)
-        print(f"Nombre total d’enregistrements : {len(df)}")
-        print(f"Nombre de bâtiments uniques : {df['id_batiment'].nunique()}")
-        print(f"Nombre d’infrastructures uniques : {df['infra_id'].nunique()}")
-        print(f"Longueur totale du réseau : {df['longueur'].sum():.1f} m")
-        print()
+        # --- Supprimer doublons éventuels ---
+        df_clean = df.drop_duplicates().reset_index(drop=True)
 
-        # --- Structure du fichier
-        print("STRUCTURE DES DONNÉES")
-        print("-" * 40)
-        print("Colonnes disponibles :")
-        for col in df.columns:
-            print(f"  - {col}")
-        print()
+        # --- Statistiques rapides ---
+        print(f"Nombre total d’enregistrements : {len(df_clean)}")
+        print(f"Nombre de bâtiments uniques : {df_clean['id_batiment'].nunique()}")
+        print(f"Nombre d’infrastructures uniques : {df_clean['infra_id'].nunique()}")
+        print(f"Longueur totale du réseau : {df_clean['longueur'].sum():.1f} m\n")
 
-        # --- Analyse par type d'infrastructure
-        print("ANALYSE PAR TYPE D'INFRASTRUCTURE")
-        print("-" * 40)
-        infra_stats = df.groupby('infra_type')['longueur'].agg(['count', 'sum', 'mean']).round(2)
-        print(infra_stats)
-        print()
-
-        # --- Analyse par type de bâtiment
-        print("ANALYSE PAR TYPE DE BÂTIMENT")
-        print("-" * 40)
-        batiment_stats = df.groupby('type_batiment').agg({
-            'id_batiment': 'nunique',
-            'longueur': 'sum',
-            'nb_maisons': 'sum'
-        }).round(2)
-        print(batiment_stats)
-        print()
-
-        # --- Top 10 bâtiments les plus longs
-        print("TOP 10 DES BÂTIMENTS PAR LONGUEUR TOTALE")
-        print("-" * 40)
-        batiment_detail = df.groupby('id_batiment').agg({
-            'type_batiment': 'first',
-            'longueur': 'sum',
-            'nb_maisons': 'first'
-        }).sort_values('longueur', ascending=False).head(10)
-        for idx, row in batiment_detail.iterrows():
-            print(f"  {idx} ({row['type_batiment']}): {row['longueur']:.1f}m, {row['nb_maisons']} maison(s)")
-        print()
-
-        # --- Visualisations clés
-        print("VISUALISATIONS STATISTIQUES")
-        print("-" * 40)
-
-        sns.set_theme(style="whitegrid")
-        fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-        fig.suptitle("Analyse du réseau électrique", fontsize=16)
-
-        # Répartition des types d’infrastructure
-        infra_counts = df['infra_type'].value_counts()
-        axes[0,0].pie(infra_counts.values, labels=infra_counts.index, autopct='%1.1f%%',
-                      colors=sns.color_palette("pastel"))
-        axes[0,0].set_title("Répartition des types d’infrastructure")
-
-        # Répartition des types de bâtiments
-        bat_counts = df['type_batiment'].value_counts()
-        axes[0,1].bar(bat_counts.index, bat_counts.values, color=sns.color_palette("Set2"))
-        axes[0,1].set_title("Répartition des types de bâtiments")
-        axes[0,1].set_ylabel("Nombre de bâtiments")
-
-        # Longueur totale par type d’infrastructure
-        infra_long = df.groupby('type_infra')['longueur'].sum().sort_values(ascending=False)
-        axes[1,0].bar(infra_long.index, infra_long.values, color=sns.color_palette("crest"))
-        axes[1,0].set_title("Longueur totale par type d’infrastructure")
-        axes[1,0].set_ylabel("Longueur (m)")
-
-        # Top 10 bâtiments par longueur
-        axes[1,1].barh(batiment_detail.index.astype(str), batiment_detail['longueur'], color=sns.color_palette("flare"))
-        axes[1,1].invert_yaxis()
-        axes[1,1].set_title("Top 10 bâtiments par longueur totale")
-        axes[1,1].set_xlabel("Longueur (m)")
-
-        plt.tight_layout()
-        plt.savefig('analyse_reseau.png', dpi=300, bbox_inches='tight')
-        plt.show()
-
-        print("Graphiques sauvegardés : 'analyse_reseau.png'\n")
-
-        return df
+        return df_clean
 
     except Exception as e:
         print(f"Erreur lors de l’analyse du fichier : {e}")
         return None
-    
-
-def visualiser_reseau_fusionne(batiments_gdf, infrastructures_gdf, df_csv):
-    print("=" * 60)
-    print("3. VISUALISATION DU RÉSEAU FUSIONNÉ")
-    print("=" * 60)
-
-    try:
-        # Vérifier les colonnes clés
-        if 'infra_id' not in infrastructures_gdf.columns or 'infra_id' not in df_csv.columns:
-            raise ValueError("Colonne 'infra_id' manquante dans les données !")
-
-        # Fusionner les shapefiles d'infrastructures avec le CSV
-        infra_merged = infrastructures_gdf.merge(
-            df_csv[['infra_id', 'infra_type', 'id_batiment']],
-            on='infra_id',
-            how='left'
-        )
-
-        print(f"Fusion réussie : {len(infra_merged)} enregistrements après jointure")
-
-        # Vérifier la présence des types d'infrastructure
-        print(infra_merged['infra_type'].value_counts(dropna=False))
-        print()
-
-        # Création de la carte
-        fig, ax = plt.subplots(1, 1, figsize=(12, 10))
-        ax.set_title("Réseau de raccordement : infrastructures et bâtiments")
-
-        # Tracer les infrastructures intactes (vert)
-        infra_intacte = infra_merged[infra_merged['infra_type'] == 'infra_intacte']
-        if not infra_intacte.empty:
-            infra_intacte.plot(ax=ax, color='green', linewidth=2, label='Infrastructures intactes')
-
-        # Tracer les infrastructures à remplacer (rouge)
-        infra_a_remplacer = infra_merged[infra_merged['infra_type'] == 'a_remplacer']
-        if not infra_a_remplacer.empty:
-            infra_a_remplacer.plot(ax=ax, color='red', linewidth=2, label='À remplacer')
-
-        # Tracer les bâtiments
-        batiments_gdf.plot(ax=ax, color='lightblue', alpha=0.6, edgecolor='navy', label='Bâtiments')
-
-        # Mise en forme
-        ax.legend()
-        ax.set_xlabel("Longitude")
-        ax.set_ylabel("Latitude")
-
-        plt.tight_layout()
-        plt.savefig('reseau_fusionne.png', dpi=300, bbox_inches='tight')
-        plt.show()
-
-        print("Carte fusionnée sauvegardée : 'reseau_fusionne.png'")
-        print()
-
-        return infra_merged
-
-    except Exception as e:
-        print(f"Erreur lors de la fusion ou de la visualisation : {e}")
-        return None
 
 
-def modeliser_reseau(df_csv):
-    print("3. MODÉLISATION DU RÉSEAU ÉLECTRIQUE")
-    print("=" * 70)
+def planifier_reparations(df_csv):
+    """
+    Planifie les réparations à partir du DataFrame des infrastructures et bâtiments.
+    Le calcul se base sur la priorité (hôpital > école > habitation) et
+    le ratio global (coût × durée / nb_maisons).
+    """
 
-    G = nx.Graph()
-
-    # --- Étape 1 : création des nœuds (bâtiments)
-    for _, row in df_csv.iterrows():
-        bat_id = row['id_batiment']
-        if bat_id not in G:
-            G.add_node(
-                bat_id,
-                type=row['type_batiment'].lower().strip(),
-                nb_maisons=int(row['nb_maisons']),
-                batiment=None  # sera défini plus tard
-            )
-
-    # --- Étape 2 : création des arêtes (infrastructures)
-    infra_grouped = df_csv.groupby('infra_id')['id_batiment'].unique()
-
-    for infra_id, batiments in infra_grouped.items():
-        batiments = list(batiments)
-        if len(batiments) > 1:
-            sub_df = df_csv[df_csv['infra_id'] == infra_id].iloc[0]
-
-            # Création de l'objet Infra avec les colonnes correctes
-            infra_obj = Infra(
-                infra_id=infra_id,
-                length=float(sub_df['longueur']),
-                infra_type=sub_df['infra_type'].lower().strip(),  # 'a_remplacer' ou 'infra_intacte'
-                nb_houses=int(sub_df['nb_maisons']),
-                type_infra=sub_df['type_infra'].lower().strip()   # 'aerien', 'fourreau', etc.
-            )
-
-            # Connexion des bâtiments dans le graphe
-            for i in range(len(batiments) - 1):
-                b1, b2 = batiments[i], batiments[i + 1]
-                G.add_edge(b1, b2, infra=infra_obj)
-
-    print(f"Réseau modélisé : {len(G.nodes)} nœuds et {len(G.edges)} arêtes.\n")
-
-    # --- Étape 3 : associer les objets Batiment à chaque nœud
-    for node_id in G.nodes:
-        connected_infras = [edata['infra'] for _, _, edata in G.edges(node_id, data=True)]
-        bat_type = G.nodes[node_id]['type']
-        G.nodes[node_id]['batiment'] = Batiment(node_id, bat_type, connected_infras)
-
-    # --- Visualisation rapide
-    pos = nx.spring_layout(G, seed=42)
-    node_colors = [
-        {'hôpital': 'red', 'école': 'blue', 'habitation': 'green'}.get(G.nodes[n]['type'], 'gray')
-        for n in G.nodes
-    ]
-
-    plt.figure(figsize=(10, 7))
-    nx.draw(G, pos, with_labels=True, node_color=node_colors, node_size=800, font_size=8)
-    plt.title("Modélisation du Réseau Électrique")
-    plt.show()
-
-    # --- Étape 4 : résumé synthétique
-    cout_total = sum(
-        edata['infra'].get_infra_cost()
-        for _, _, edata in G.edges(data=True)
-        if edata['infra'].infra_type == 'a_remplacer'
-    )
-    print(f"Coût total estimé des infrastructures à remplacer : {cout_total:,.0f} €")
-
-    return G
-
-
-import pandas as pd
-import networkx as nx
-
-def planifier_reparations(df_csv, G):
-    print("5. PLANIFICATION DES RÉPARATIONS")
-    print("=" * 60)
-
-    # --- Étape 1 : Créer les objets Infra ---
-    infra_dict = {}
-    for _, row in df_csv.iterrows():
-        infra_id = row['infra_id']
-        if infra_id not in infra_dict:
-            infra_dict[infra_id] = Infra(
-                infra_id=infra_id,
-                length=row['longueur'],
-                infra_type=row['infra_type'],
-                nb_houses=row['nb_maisons'],
-                type_infra=row['type_infra']
-            )
-
-    # --- Étape 2 : Créer les objets Batiment ---
-    batiments_dict = {}
-    for batiment_id, group in df_csv.groupby('id_batiment'):
-        type_batiment = group['type_batiment'].iloc[0]
-        infras = [infra_dict[i] for i in group['infra_id'].unique()]
-        batiments_dict[batiment_id] = Batiment(
-            id_building=batiment_id,
-            type_batiment=type_batiment,
-            list_infras=infras
-        )
-
-    # --- Étape 3 : Identifier les bâtiments à réparer ---
-    batiments_a_reparer = [
-        b for b in batiments_dict.values() if b.get_building_difficulty() > 0
-    ]
-    batiments_intacts = [
-        b for b in batiments_dict.values() if b.get_building_difficulty() == 0
-    ]
-
-    print(f"{len(batiments_intacts)} bâtiments intacts (aucune réparation nécessaire)")
-    print(f"{len(batiments_a_reparer)} bâtiments nécessitent des réparations\n")
-
-    # --- Étape 4 : Boucle principale de planification ---
-    plan = []
-    phase = 1
-    repaired_infras = set()  # pour éviter de réparer plusieurs fois la même infra
-
-    while batiments_a_reparer:
-        # Recalculer les scores techniques
-        for b in batiments_a_reparer:
-            b.get_priority_score_graph(G)
-
-        # Sélection hiérarchique : type de bâtiment puis score technique
-        batiment_min = max(
-            batiments_a_reparer,
-            key=lambda b: (4 - Batiment.PRIORITE_PAR_TYPE.get(b.type_batiment,4), b.last_score)
-        )
-
-        difficulte = batiment_min.get_building_difficulty()
-        cout = batiment_min.get_building_cost()
-        duree = batiment_min.get_building_duration()
-        score = batiment_min.last_score
-
-        print(f"Phase {phase:02d}: Réparation de {batiment_min.id_building} "
-              f"({batiment_min.type_batiment}) | "
-              f"difficulté={difficulte:.2f}, coût={cout:,.0f}€, "
-              f"durée={duree:.1f}h, score={score:,.0f}")
-
-        # Réparer les infrastructures associées
-        batiment_min.repair()
-        repaired_infras.update([infra.infra_id for infra in batiment_min.list_infras])
-
-        # Ajouter au plan
-        plan.append({
-            "phase": phase,
-            "id_batiment": batiment_min.id_building,
-            "type_batiment": batiment_min.type_batiment,
-            "difficulte_batiment": difficulte,
-            "cout_total": cout,
-            "duree_totale_h": duree,
-            "score_priorite": score
-        })
-
-        # Retirer le bâtiment réparé
-        batiments_a_reparer.remove(batiment_min)
-
-        # Retirer ceux qui sont désormais réparés
-        batiments_a_reparer = [
-            b for b in batiments_a_reparer if b.get_building_difficulty() > 0
-        ]
-
-        phase += 1
-
-    # --- Étape 5 : Résumé global ---
-    print("\nPlanification terminée : tous les bâtiments ont été réparés.")
-    total_cout = sum(p["cout_total"] for p in plan)
-    total_duree = sum(p["duree_totale_h"] for p in plan)
-    print(f"Coût total estimé du plan : {total_cout:,.0f} €")
-    print(f"Durée totale estimée : {total_duree:,.1f} h\n")
-
-    # Retourner le plan sous forme de DataFrame
-    df_plan = pd.DataFrame(plan)
-    return df_plan
-
-def planifier_reparations_optimal(df_csv, G):
-    print("5. PLANIFICATION OPTIMISÉE DES RÉPARATIONS (mutualisation + prises raccordées)")
+    print("PLANIFICATION DES RÉPARATIONS (score global efficacité coût×durée/prises)")
     print("=" * 80)
 
-    # --- Étape 1 : Créer les objets Infra (on suppose classe Infra définie) ---
+    # --- Étape 1 : Création des objets Infra ---
     infra_dict = {}
     for _, row in df_csv.iterrows():
         infra_id = row['infra_id']
@@ -451,105 +74,85 @@ def planifier_reparations_optimal(df_csv, G):
                 type_infra=row.get('type_infra', '')
             )
 
-    # --- Étape 2 : Créer les objets Batiment ---
+    # --- Étape 2 : Création des objets Batiment ---
     batiments_dict = {}
     for batiment_id, group in df_csv.groupby('id_batiment'):
-        type_batiment = group['type_batiment'].iloc[0]
-        infras = [infra_dict[i] for i in group['infra_id'].unique()]
-        batiments_dict[batiment_id] = Batiment(
-            id_building=batiment_id,
-            type_batiment=type_batiment,
-            list_infras=infras
-        )
+        type_bat = str(group['type_batiment'].iloc[0]).strip().lower()
+        infras = [infra_dict[i] for i in group['infra_id'].unique() if i in infra_dict]
+        batiments_dict[batiment_id] = Batiment(batiment_id, type_bat, infras)
 
-    # --- Liste initiale des bâtiments à réparer ---
-    batiments_a_reparer = [
-        b for b in batiments_dict.values() if b.get_building_difficulty() > 0
-    ]
-    batiments_intacts = [
-        b for b in batiments_dict.values() if b.get_building_difficulty() == 0
-    ]
+    # --- Étape 3 : Catégorisation des bâtiments ---
+    batiments_intacts = [b for b in batiments_dict.values() if b.get_building_houses() == 0]
+    batiments_a_reparer = [b for b in batiments_dict.values() if b.get_building_houses() > 0]
 
-    print(f"{len(batiments_intacts)} bâtiments intacts (aucune réparation nécessaire)")
-    print(f"{len(batiments_a_reparer)} bâtiments nécessitent des réparations\n")
+    print(f"{len(batiments_intacts)} bâtiments en phase 0 (aucune réparation nécessaire)")
+    print(f"{len(batiments_a_reparer)} bâtiments nécessitent une intervention\n")
 
-    # --- Boucle gloutonne : chaque phase on choisit le bâtiment qui maximise le score optimal ---
+    # --- Étape 4 : Boucle de planification ---
     plan = []
     phase = 1
-    repaired_infras = set()
 
-    # Pour suivi global des prises raccordées
-    total_prises = 0
-
-    # Tant qu'il reste des bâtiments nécessitant des réparations effectives
-    while True:
-        # Recalcul des candidats (ceux qui ont encore au moins une infra non réparée)
-        candidats = []
+    while batiments_a_reparer:
+        # Mise à jour des scores
         for b in batiments_a_reparer:
-            # compute marginal potential
-            # utiliser la méthode optimale (on lui passe repaired_infras et G pour mutualisation)
-            score = b.get_priority_score_graph_optimal(repaired_infras, G)
-            # récup metrics si disponibles
-            metrics = getattr(b, "_optimal_marginal", None)
-            if metrics and metrics["marginal_houses"] > 0:
-                candidats.append((score, b, metrics))
+            b.get_priority_ratio()  # met à jour b.last_score
 
-        if not candidats:
-            break  # plus rien à faire
+        # Tri combiné : priorité métier (via __lt__) + ratio
+        batiments_a_reparer.sort()
 
-        # sélectionner le meilleur candidat (score le plus élevé)
-        candidats.sort(key=lambda x: x[0], reverse=True)
-        best_score, best_b, best_metrics = candidats[0]
+        # Sélection du bâtiment le plus prioritaire
+        best_b = batiments_a_reparer.pop(0)
 
-        # valeurs marginals pour affichage
-        difficulte = best_metrics["marginal_difficulty"]
-        cout = best_metrics["marginal_cost"]
-        duree = best_metrics["marginal_duration"]
-        prises = best_metrics["marginal_houses"]
+        # Mise à jour du DataFrame d'origine
+        infra_associees = [infra.infra_id for infra in best_b.list_infras]
+        df_csv.loc[df_csv['infra_id'].isin(infra_associees), 'infra_type'] = 'infra_intacte'
 
-        print(f"Phase {phase:02d}: Réparer {best_b.id_building} ({best_b.type_batiment}) | "
-              f"prises_add={prises}, coût_marginal={cout:,.0f}€, durée_marginal={duree:.1f}h, score={best_score:,.0f}")
+        # Calcul des métriques
+        cost = best_b.get_total_cost()
+        duration = best_b.get_real_duration()
+        houses = best_b.get_building_houses()
+        ratio = best_b.last_score
 
-        # Effectuer la réparation (ne réparer que les infras non encore réparées)
-        for infra in best_b.list_infras:
-            if infra.infra_type == "a_remplacer" and infra.infra_id not in repaired_infras:
-                # méthode d'instance supposée exister pour marquer l'infra réparée
-                infra.repair_infra()
-                repaired_infras.add(infra.infra_id)
+        print(f"Phase {phase:02d} → Réparation de {best_b.id_building} "
+              f"({best_b.type_batiment}) | coût={cost:,.0f}€, durée={duration:.1f}h, "
+              f"prises={houses}, ratio={ratio:.3f}")
 
-        # ajouter au plan
         plan.append({
             "phase": phase,
             "id_batiment": best_b.id_building,
             "type_batiment": best_b.type_batiment,
-            "prises_gagnees": prises,
-            "difficulte_marginale": difficulte,
-            "cout_marginal": cout,
-            "duree_marginale_h": duree,
-            "score_priorite_optimal": best_score
+            "cout_total": cost,
+            "duree_totale_h": duration,
+            "nb_maisons": houses,
+            "ratio": ratio,
+            "score": best_b.last_score
         })
 
-        total_prises += prises
+        
+        # Réparation effective
+        best_b.repair()
 
-        # Mettre à jour la liste des bâtiments restant (ceux qui ont encore des infras non réparées)
-        batiments_a_reparer = [
-            b for b in batiments_a_reparer
-            if any(inf.infra_type == "a_remplacer" and inf.infra_id not in repaired_infras for inf in b.list_infras)
-        ]
+        # Mise à jour du DataFrame
+        infra_associees = [infra.infra_id for infra in best_b.list_infras]
+        df_csv.loc[df_csv['infra_id'].isin(infra_associees), 'infra_type'] = 'infra_intacte'
+
+        # Recalcul du ratio des bâtiments restants (après réparation)
+        for b in batiments_a_reparer:
+            b.get_priority_ratio()
 
         phase += 1
 
-    # résumé
-    total_cout = sum(p["cout_marginal"] for p in plan)
-    total_duree = sum(p["duree_marginale_h"] for p in plan)
+    # --- Étape 5 : Résumé global ---
+    total_cout = sum(p["cout_total"] for p in plan)
+    total_duree = sum(p["duree_totale_h"] for p in plan)
+    total_maisons = sum(p["nb_maisons"] for p in plan)
 
-    print("\nPlanification optimisée terminée.")
-    print(f"Coût total estimé (marginal) : {total_cout:,.0f} €")
+    print("\nPlanification terminée.")
+    print(f"Coût total estimé : {total_cout:,.0f} €")
     print(f"Durée totale estimée : {total_duree:,.1f} h")
-    print(f"Nombre total de prises raccordées (estimé) : {total_prises}\n")
+    print(f"Nombre total de prises raccordées : {total_maisons}\n")
 
-    df_plan = pd.DataFrame(plan)
-    return df_plan
+    return pd.DataFrame(plan)
 
 
 def main():
@@ -559,22 +162,16 @@ def main():
     print("PLANIFICATION DU RACCORDEMENT ÉLECTRIQUE")
     print("=" * 60)
 
-    # Étape 1 : Analyse des shapefiles
-    # batiments_gdf, infrastructures_gdf = analyser_shapefiles()
 
-    # Étape 2 : Analyse du CSV et Visualisation du réseau fusionné
+    # Étape : Analyse du CSV et Visualisation du réseau fusionné
     df = analyser_csv()
-    # infra_merged = visualiser_reseau_fusionne(batiments_gdf, infrastructures_gdf, df)   
 
     if df is None:
         return
 
-    # Étape 3 : Modélisation du réseau
-    G = modeliser_reseau(df)
+    # Étape 3 : Modélisation du réseau (orienté objects Infra et Batiment)
     # Étape 4 : Planification des réparations
-    plan_df = planifier_reparations(df, G)
-
-    plan_df_optimal = planifier_reparations_optimal(df, G)
+    plan_df = planifier_reparations(df)
     
     print("PLANIFICATION TERMINÉE")
     print("=" * 60)
