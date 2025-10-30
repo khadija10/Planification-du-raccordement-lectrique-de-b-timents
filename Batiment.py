@@ -1,10 +1,10 @@
 import networkx as nx
+import pandas as pd
 
 class Batiment:
     """
     Représente un bâtiment connecté à une ou plusieurs infrastructures.
-    Inclut une logique de priorisation basée sur la difficulté, le coût,
-    la durée et la mutualisation du réseau électrique.
+    Priorisation basée sur la difficulté, le coût, la durée et la mutualisation du réseau.
     """
 
     PRIORITE_PAR_TYPE = {
@@ -17,82 +17,43 @@ class Batiment:
         self.id_building = id_building
         self.type_batiment = type_batiment.lower().strip()
         self.list_infras = list_infras  # liste d’objets Infra
+        self.last_score = 0  # score utilisé pour le tri et affichage
 
     # --- Métriques principales ---
-
     def get_building_difficulty(self) -> float:
-        """Somme des difficultés des infras à remplacer"""
-        return sum(
-            infra.get_infra_difficulty()
-            for infra in self.list_infras
-            if infra.infra_type == "a_remplacer"
-        )
+        return sum(infra.get_infra_difficulty() for infra in self.list_infras if infra.infra_type == "a_remplacer")
 
     def get_building_cost(self) -> float:
-        """Somme des coûts totaux des infras à remplacer"""
-        return sum(
-            infra.get_infra_cost()
-            for infra in self.list_infras
-            if infra.infra_type == "a_remplacer"
-        )
+        return sum(infra.get_infra_cost() for infra in self.list_infras if infra.infra_type == "a_remplacer")
 
     def get_building_duration(self) -> float:
-        """Somme des durées totales des infras à remplacer"""
-        return sum(
-            infra.get_infra_duration()
-            for infra in self.list_infras
-            if infra.infra_type == "a_remplacer"
-        )
+        return sum(infra.get_infra_duration() for infra in self.list_infras if infra.infra_type == "a_remplacer")
 
-    # --- Gestion du statut ---
-
+    # --- Réparation ---
     def repair(self):
-        """Répare toutes les infrastructures associées à ce bâtiment."""
         for infra in self.list_infras:
             infra.repair_infra()
 
-    # --- Fonctions de tri et priorité (ancienne méthode basique) ---
-
-    def get_priority_score(self) -> float:
-        """
-        Score de priorité global :
-        Priorité par type de bâtiment
-        Sous-score par difficulté, coût et durée
-        Moins le score est élevé, plus le bâtiment est prioritaire.
-        """
-        priority_base = self.PRIORITE_PAR_TYPE.get(self.type_batiment, 4)
-
-        diff = self.get_building_difficulty()
-        cout = self.get_building_cost()
-        duree = self.get_building_duration()
-
-        sub_score = (diff * 0.5) + (cout * 0.3 / 1000) + (duree * 0.2 / 10)
-        return priority_base * 10000 + sub_score
-
-    # --- Nouvelle logique basée sur la théorie des graphes ---
-
+    # --- Mutualisation réseau ---
     def get_mutualisation_score(self, G: nx.Graph) -> float:
-        """
-        Score basé sur le degré de connexion du bâtiment (mutualisation).
-        Plus un bâtiment est connecté à d'autres nœuds, plus il bénéficie
-        d'une mutualisation favorable.
-        """
         return 1 + G.degree(self.id_building)
 
+    # --- Score de priorité basé sur le graphe ---
     def get_priority_score_graph(self, G: nx.Graph) -> float:
         """
-        Métrique de priorisation avancée :
-        Combine coût total, difficulté moyenne, mutualisation du réseau et type du bâtiment.
-        Favorise les bâtiments peu coûteux et bien mutualisés.
+        Score de priorité avancé :
+        Combine la structure du graphe (mutualisation, coût, difficulté)
+        avec la criticité du type de bâtiment (PRIORITE_PAR_TYPE).
+        Les hôpitaux sont traités avant les écoles, puis les habitations.
         """
-        priority_base = self.PRIORITE_PAR_TYPE.get(self.type_batiment, 4)
 
-        infras_remplacer = [
-            infra for infra in self.list_infras if infra.infra_type == "a_remplacer"
-        ]
+        # --- 1. Sélection des infrastructures à remplacer ---
+        infras_remplacer = [infra for infra in self.list_infras if infra.infra_type == "a_remplacer"]
         if not infras_remplacer:
-            return float('inf')
+            self.last_score = 0
+            return 0
 
+        # --- 2. Indicateurs techniques ---
         total_cost = sum(infra.get_infra_cost() for infra in infras_remplacer)
         total_difficulty = sum(infra.get_infra_difficulty() for infra in infras_remplacer)
         total_houses = sum(infra.nb_houses for infra in infras_remplacer)
@@ -102,23 +63,107 @@ class Batiment:
         facilite = 1 / (1 + avg_difficulty)
         mutualisation = self.get_mutualisation_score(G)
 
-        # Combinaison pondérée des critères
-        score_utilite = efficacite * facilite * mutualisation
-        score_final = (10 / priority_base) * score_utilite * 1e6
+        score_technique = efficacite * facilite * mutualisation
+
+        # --- 3. Facteur de priorité basé sur le type ---
+        # (plus le nombre est petit, plus la priorité est haute)
+        base_priorite = self.PRIORITE_PAR_TYPE.get(self.type_batiment, 4)
+
+        # --- 4. Combinaison hiérarchisée ---
+        # On inverse la logique pour que les plus prioritaires (hôpital=1)
+        # aient un score global plus élevé
+        score_final = ((4 - base_priorite) * 1e6) + (score_technique * 1e6)
+
+        self.last_score = score_final
+        return score_final
+
+    def get_priority_score_graph_optimal(self, repaired_infras: set, G: nx.Graph = None) -> float:
+        """
+        Score d'optimalité pour choix glouton :
+        - calcule les valeurs marginales si on répare ce bâtiment *maintenant* en tenant compte
+        des infrastructures déjà réparées (repaired_infras).
+        - utilise : prises supplémentaires (nb_houses), coût marginal, mutualisation (degré dans G),
+        et la priorité métier (hôpital/école/habitation).
+        - renvoie un score : plus élevé = prioritaire.
+        """
+        # infrastructures réellement à remplacer et pas encore réparées
+        infras_a_considerer = [
+            infra for infra in self.list_infras
+            if infra.infra_type == "a_remplacer" and infra.infra_id not in repaired_infras
+        ]
+
+        if not infras_a_considerer:
+            self.last_score = 0.0
+            return 0.0
+
+        # marginals
+        marginal_cost = sum(infra.get_infra_cost() for infra in infras_a_considerer)
+        marginal_houses = sum(infra.nb_houses for infra in infras_a_considerer)
+        marginal_difficulty = sum(infra.get_infra_difficulty() for infra in infras_a_considerer)
+        marginal_duration = sum(infra.get_infra_duration() for infra in infras_a_considerer)
+
+        # sécurité
+        eps = 1e-6
+
+        # efficacité (prises raccordées par euro dépensé)
+        efficacite = marginal_houses / (marginal_cost + eps)
+
+        # facteur "facilité" (on favorise interventions pas trop difficiles)
+        # la plus faible difficulté => plus favorable
+        if len(infras_a_considerer) > 0:
+            avg_difficulty = marginal_difficulty / len(infras_a_considerer)
+        else:
+            avg_difficulty = 0.0
+        facilite = 1.0 / (1.0 + avg_difficulty)
+
+        # mutualisation : si noeud fortement connecté, réparer ici peut profiter plus au réseau
+        mutualisation = 1.0
+        if G is not None and self.id_building in G:
+            mutualisation += G.degree(self.id_building)
+
+        # priorité métier : on veut que hôpital>école>habitation
+        base_priorite = self.PRIORITE_PAR_TYPE.get(self.type_batiment, 4)
+
+        # Compose a score:
+        # - priorité métier a poids très élevé (pour garantir ordre hiérarchique)
+        # - puis efficacite * facilite * mutualisation comme critère économique/réseau
+        # - on pénalise légèrement le coût marginal et la durée marginale pour départager égalités
+        score_economique = efficacite * facilite * mutualisation
+
+        # pondérations (échelles choisies pour garder priorité métier dominante)
+        score_final = ((4 - base_priorite) * 1e6) + (score_economique * 1e5) \
+                    - (marginal_cost * 1e-2) - (marginal_duration * 1e2)
+
+        # conserver les valeurs pour debug/affichage
+        self.last_score = score_final
+        # on peut aussi stocker des métriques utiles si besoin (facultatif)
+        self._optimal_marginal = {
+            "marginal_cost": marginal_cost,
+            "marginal_houses": marginal_houses,
+            "marginal_duration": marginal_duration,
+            "marginal_difficulty": marginal_difficulty,
+            "score_economique": score_economique
+        }
 
         return score_final
 
-    # --- Comparaison et affichage ---
+    
 
+    # --- Comparaison et affichage ---
     def __lt__(self, other):
-        """Permet de trier les bâtiments selon leur score de priorité"""
-        return self.get_priority_score() < other.get_priority_score()
+        # Priorité métier : hôpital > école > habitation
+        p1 = self.PRIORITE_PAR_TYPE.get(self.type_batiment, 4)
+        p2 = self.PRIORITE_PAR_TYPE.get(other.type_batiment, 4)
+
+        # Si le type diffère → ordre de priorité
+        if p1 != p2:
+            return p1 < p2
+
+        # Sinon, on trie par score décroissant
+        return self.last_score > other.last_score
 
     def __repr__(self):
-        return (f"Batiment({self.id_building}, "
-                f"type={self.type_batiment}, "
-                f"{len(self.list_infras)} infras, "
-                f"difficulté={self.get_building_difficulty():.2f}, "
-                f"coût={self.get_building_cost():.0f}€, "
-                f"durée={self.get_building_duration():.1f}h, "
-                f"score={self.get_priority_score():.2f})")
+        return (f"Batiment({self.id_building}, type={self.type_batiment}, "
+                f"{len(self.list_infras)} infras, difficulté={self.get_building_difficulty():.2f}, "
+                f"coût={self.get_building_cost():.0f}€, durée={self.get_building_duration():.1f}h, "
+                f"score={self.last_score:.2f})")
