@@ -139,6 +139,9 @@ def planifier_reparations(df_csv):
         # Recalcul du ratio des bâtiments restants (après réparation)
         for b in batiments_a_reparer:
             b.get_priority_ratio()
+        
+        # Mise à jour de la liste pour supprimer ceux déjà réparés
+        batiments_a_reparer = [b for b in batiments_a_reparer if b.get_building_houses() > 0]
 
         phase += 1
 
