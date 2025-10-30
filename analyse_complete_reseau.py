@@ -14,7 +14,7 @@ import unicodedata
 # === CONFIGURATION ===
 warnings.filterwarnings("ignore", category=FutureWarning)
 sns.set(style="whitegrid")
-os.makedirs("data/rapport_pdf", exist_ok=True)
+os.makedirs("rapport_pdf", exist_ok=True)
 
 # === LECTURE DES DONNÉES ===
 old_file = "data/reseau_en_arbre.xlsx"
@@ -232,6 +232,5 @@ pdf.chapter_body(
     "du reseau comme levier de resilence urbaine."
 )
 
-
-pdf.output("data/rapport_pdf/rapport_complet_analyse_reseau_commenté.pdf")
-print(" Rapport PDF complet généré : data/rapport_pdf/rapport_complet_analyse_reseau_commenté.pdf")
+pdf.output("rapport_pdf/rapport_complet_analyse_reseau_commenté.pdf")
+print(" Rapport PDF complet généré : rapport_pdf/rapport_complet_analyse_reseau_commenté.pdf")
