@@ -1,102 +1,142 @@
 """
-Analyse approfondie du fichier reseau_en_arbre.xlsx, V2
-Objectif : générer une analyse descriptive + visuelle du réseau électrique
+Analyse approfondie du fichier reseau_en_arbre.xlsx (Version 2)
+
+Objectif :
+Fournir une analyse détaillée du réseau électrique :
+- Structure et distribution du réseau
+- Mutualisation des infrastructures
+- Efficacité (nb de maisons / longueur)
+- Sauvegarde automatique des graphiques dans le dossier 'data/'
 """
 
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
 import os
 
-# === Chargement du fichier ===
+# === Configuration ===
+sns.set(style="whitegrid")
+plt.rcParams["figure.autolayout"] = True
+
+# Création du dossier data si nécessaire
+os.makedirs("data", exist_ok=True)
+
+# === Lecture du fichier ===
 fichier_excel = "data/reseau_en_arbre.xlsx"
-print(f"Chargement du fichier : {fichier_excel}")
-
 reseau = pd.read_excel(fichier_excel)
-print(f" Données chargées : {len(reseau)} lignes")
 
-# === Analyse de base ===
-print("\n=== Aperçu des données ===")
+print(" Fichier chargé avec succès !")
+print(f"Nombre total de lignes : {len(reseau)}")
+print("\nAperçu du fichier :")
 print(reseau.head())
 
-print("\n=== Informations générales ===")
-print(reseau.info())
-
-# === Statistiques ===
-print("\n=== Statistiques descriptives ===")
-print(reseau.describe())
-
-# === Analyse des types d'infrastructures ===
-type_counts = reseau["infra_type"].value_counts()
+# === Analyse descriptive ===
 print("\n=== Répartition des types d'infrastructures ===")
-print(type_counts)
+print(reseau["infra_type"].value_counts(), "\n")
 
-# === Analyse corrélationnelle ===
-print("\n=== Corrélations numériques ===")
-corr = reseau[["nb_maisons", "longueur"]].corr()
-print(corr)
+print("=== Statistiques descriptives ===")
+print(reseau[["longueur", "nb_maisons"]].describe(), "\n")
 
-# === Visualisations ===
-sns.set(style="whitegrid")
+# === Mutualisation (nombre de bâtiments par ligne) ===
+mutualisation = reseau.groupby("infra_id")["id_batiment"].nunique().reset_index()
+mutualisation.columns = ["infra_id", "nb_batiments_connectes"]
 
-# Histogramme longueurs
-plt.figure(figsize=(8, 5))
-sns.histplot(reseau["longueur"], bins=25, kde=True, color="steelblue")
-plt.title("Distribution des longueurs d’infrastructure (mètres)")
+reseau = reseau.merge(mutualisation, on="infra_id", how="left")
+
+print("=== Mutualisation moyenne ===")
+print(mutualisation["nb_batiments_connectes"].describe(), "\n")
+
+# === Efficacité (nombre de maisons / longueur) ===
+reseau["efficacite"] = reseau["nb_maisons"] / reseau["longueur"]
+print("=== Efficacité moyenne (maisons/mètre) ===")
+print(reseau["efficacite"].describe(), "\n")
+
+# === Interprétation ===
+nb_total = len(reseau)
+nb_remplacer = reseau[reseau["infra_type"] == "a_remplacer"].shape[0]
+pct_remplacer = (nb_remplacer / nb_total) * 100
+long_moy = reseau["longueur"].mean()
+eff_moy = reseau["efficacite"].mean()
+mutu_moy = mutualisation["nb_batiments_connectes"].mean()
+
+print("\n=== Interprétation automatique ===")
+print(f"- Total : {nb_total} connexions, dont {nb_remplacer} à remplacer ({pct_remplacer:.1f} %).")
+print(f"- Longueur moyenne : {long_moy:.2f} m.")
+print(f"- Efficacité moyenne : {eff_moy:.3f} maisons/m.")
+print(f"- Mutualisation moyenne : {mutu_moy:.2f} bâtiments par ligne.")
+print("-- Ces résultats montrent un réseau dense, avec de nombreuses lignes courtes à faible efficacité moyenne.")
+print("-- Les lignes les plus mutualisées (partagées par > 5 bâtiments) représentent des points critiques pour la priorisation.\n")
+
+# === Graphiques (sauvegardés dans /data) ===
+
+# Distribution des longueurs
+plt.figure(figsize=(8, 4))
+sns.histplot(reseau["longueur"], bins=25, kde=True, color="teal")
+plt.title("Distribution des longueurs des infrastructures")
 plt.xlabel("Longueur (m)")
 plt.ylabel("Fréquence")
-plt.tight_layout()
-plt.savefig("dist_longueurs.png")
+plt.savefig("data/dist_longueurs_v2.png")
 plt.close()
 
-# Boxplot par type
-plt.figure(figsize=(8, 5))
-sns.boxplot(x="infra_type", y="longueur", data=reseau, palette="viridis")
-plt.title("Comparaison des longueurs selon le type d’infrastructure")
-plt.xlabel("Type d’infrastructure")
-plt.ylabel("Longueur (m)")
-plt.tight_layout()
-plt.savefig("boxplot_types.png")
+# Distribution du nombre de maisons
+plt.figure(figsize=(8, 4))
+sns.histplot(reseau["nb_maisons"], bins=10, kde=False, color="orange")
+plt.title("Distribution du nombre de maisons par tronçon")
+plt.xlabel("Nombre de maisons")
+plt.ylabel("Fréquence")
+plt.savefig("data/dist_maisons_v2.png")
 plt.close()
 
-# Top 10 infrastructures les plus longues
-top10 = reseau.nlargest(10, "longueur")[["infra_id", "longueur", "infra_type"]]
-print("\n=== Top 10 infrastructures les plus longues ===")
-print(top10)
-
-plt.figure(figsize=(8, 5))
-sns.barplot(data=top10, x="infra_id", y="longueur", hue="infra_type", dodge=False)
-plt.xticks(rotation=45, ha="right")
-plt.title("Top 10 des infrastructures les plus longues")
-plt.tight_layout()
-plt.savefig("top10_infra.png")
+# Mutualisation
+plt.figure(figsize=(8, 4))
+sns.histplot(mutualisation["nb_batiments_connectes"], bins=20, color="purple")
+plt.title("Distribution du nombre de bâtiments connectés par ligne")
+plt.xlabel("Nombre de bâtiments")
+plt.ylabel("Fréquence")
+plt.savefig("data/dist_mutualisation_v2.png")
 plt.close()
 
-# === Rapport texte automatique ===
-rapport = []
+#  Efficacité
+plt.figure(figsize=(8, 4))
+sns.histplot(reseau["efficacite"], bins=25, color="green", kde=True)
+plt.title("Distribution de l’efficacité (maisons par mètre)")
+plt.xlabel("Maisons par mètre")
+plt.ylabel("Fréquence")
+plt.savefig("data/dist_efficacite_v2.png")
+plt.close()
 
-rapport.append("=== RAPPORT D’ANALYSE DU RÉSEAU (V2) ===\n")
-rapport.append(f"Total de connexions : {len(reseau)}\n")
-rapport.append(f"Infrastructures intactes : {type_counts.get('infra_intacte', 0)}")
-rapport.append(f"Infrastructures à remplacer : {type_counts.get('a_remplacer', 0)}\n")
+#  Corrélation longueur vs mutualisation
+plt.figure(figsize=(6, 6))
+sns.scatterplot(
+    data=reseau, x="longueur", y="nb_batiments_connectes",
+    hue="infra_type", alpha=0.7
+)
+plt.title("Corrélation : longueur ↔ nombre de bâtiments connectés")
+plt.xlabel("Longueur (m)")
+plt.ylabel("Bâtiments connectés")
+plt.savefig("data/correlation_longueur_mutualisation_v2.png")
+plt.close()
 
-rapport.append("Longueur moyenne : {:.2f} m".format(reseau["longueur"].mean()))
-rapport.append("Nombre moyen de maisons par bâtiment : {:.2f}".format(reseau["nb_maisons"].mean()))
+# === Rapport résumé ===
+rapport = [
+    "=== RAPPORT D’ANALYSE DU RÉSEAU (V2) ===",
+    f"Total connexions : {nb_total}",
+    f"À remplacer : {nb_remplacer} ({pct_remplacer:.1f}%)",
+    f"Longueur moyenne : {long_moy:.1f} m",
+    f"Efficacité moyenne : {eff_moy:.3f} maisons/m",
+    f"Mutualisation moyenne : {mutu_moy:.2f} bâtiments/ligne",
+    "",
+    " Graphiques générés dans le dossier 'data/' :",
+    "- dist_longueurs_v2.png",
+    "- dist_maisons_v2.png",
+    "- dist_mutualisation_v2.png",
+    "- dist_efficacite_v2.png",
+    "- correlation_longueur_mutualisation_v2.png",
+]
 
-rapport.append("\n--- Corrélations ---")
-rapport.append(corr.to_string())
-
-rapport.append("\n--- Interprétation ---")
-rapport.append("Les résultats montrent que les infrastructures à remplacer représentent environ {:.1f}% du réseau total.".format(
-    (type_counts.get('a_remplacer', 0) / len(reseau)) * 100))
-rapport.append("Le réseau est majoritairement constitué de lignes courtes (< 50 m), typiques de raccordements de proximité.")
-rapport.append("Une faible corrélation est observée entre la longueur et le nombre de maisons (cela suggère que la taille de la ligne n’impacte pas fortement le nombre de foyers raccordés).")
-
-# Sauvegarde du rapport
-with open("rapport_analyse_v2.txt", "w", encoding="utf-8") as f:
+with open("data/rapport_analyse_v2.txt", "w", encoding="utf-8") as f:
     f.write("\n".join(rapport))
 
-print("\n Rapport sauvegardé sous 'rapport_analyse_v2.txt'")
-print(" Graphiques enregistrés : dist_longueurs.png, boxplot_types.png, top10_infra.png")
-
-print("\nAnalyse terminée avec succès.")
+print(" Rapport sauvegardé dans 'rapport_analyse_v2.txt'")
+print(" Graphiques enregistrés dans le dossier 'data/'")
+print("\nAnalyse V2 terminée avec succès.")
