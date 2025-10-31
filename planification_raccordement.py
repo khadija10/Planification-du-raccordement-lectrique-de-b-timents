@@ -108,8 +108,8 @@ def planifier_reparations(df_csv):
         df_csv.loc[df_csv['infra_id'].isin(infra_associees), 'infra_type'] = 'infra_intacte'
 
         # Calcul des métriques
-        cost = best_b.get_total_cost()
-        duration = best_b.get_real_duration()
+        cost = best_b.get_building_cost()
+        duration = best_b.get_building_duration()
         houses = best_b.get_building_houses()
         ratio = best_b.last_score
 

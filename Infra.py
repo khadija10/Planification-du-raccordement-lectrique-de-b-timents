@@ -44,17 +44,6 @@ class Infra:
         """Durée théorique (h)"""
         return self.length * self.duree_par_m
 
-    def get_real_duration(self) -> float:
-        """Durée réelle en tenant compte du nombre max d'ouvriers"""
-        nb_ouvriers = min(self.MAX_OUVRIERS, 1)  # toujours au moins 1 ouvrier
-        return self.get_infra_duration() / nb_ouvriers
-
-    def get_total_cost(self) -> float:
-        """Coût total = matériel + main d’œuvre"""
-        duree_reelle = self.get_real_duration()
-        cout_ouvriers = self.COUT_OUVRIER_8H * (duree_reelle / 8)
-        return self.get_infra_cost() + cout_ouvriers
-
     def __repr__(self):
         return (f"Infra({self.infra_id}, {self.length:.2f}m, {self.infra_type}, "
                 f"type={self.type_infra}, {self.nb_houses} maisons, "

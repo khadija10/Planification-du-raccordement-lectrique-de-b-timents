@@ -26,20 +26,13 @@ class Batiment:
     def get_building_duration(self) -> float:
         """Durée théorique totale"""
         return sum(infra.get_infra_duration() for infra in self.list_infras if infra.infra_type == "a_remplacer")
-
-    def get_real_duration(self) -> float:
-        """Durée réelle avec max 4 ouvriers par infra"""
-        return sum(infra.get_real_duration() for infra in self.list_infras if infra.infra_type == "a_remplacer")
-
-    def get_total_cost(self) -> float:
-        """Coût total = matériel + main d’œuvre"""
-        return sum(infra.get_total_cost() for infra in self.list_infras if infra.infra_type == "a_remplacer")
+   
 
     # --- Ratio priorité ---
     def get_priority_ratio(self) -> float:
         """Ratio = (coût total * durée réelle) / nb_maisons"""
         houses = self.get_building_houses() or 1
-        ratio = (self.get_total_cost() * self.get_real_duration()) / houses
+        ratio = (self.get_building_cost() * self.get_building_duration()) / houses
         self.last_score = ratio
         return ratio
 
