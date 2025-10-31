@@ -95,6 +95,10 @@ def assigner_phases(plan_df):
 def executer_phases(plan_df, batiments_dict, infra_dict):
     print("=== DÉBUT DES PHASES DE TRAVAUX ===\n")
 
+    projet_cout_total = 0
+    projet_duree_total = 0
+    projet_total_ouvriers = 0
+
     for phase_num in sorted(plan_df["phase_construct"].unique()):
         batiments_phase = plan_df[plan_df["phase_construct"] == phase_num]
 
@@ -110,8 +114,10 @@ def executer_phases(plan_df, batiments_dict, infra_dict):
         for _, row in batiments_phase.iterrows():
             bat = batiments_dict[row["id_batiment"]]
             nb_prises = bat.get_building_houses()
-            nb_ouvriers = nb_prises * 4  # 4 ouvriers par prise
+            if nb_prises == 0:
+                continue  # déjà réparé dans une phase précédente
 
+            nb_ouvriers = nb_prises * 4  # 4 ouvriers par prise
             cout_bat = bat.get_total_cost()
             duree_bat = bat.get_real_duration()
 
@@ -122,14 +128,27 @@ def executer_phases(plan_df, batiments_dict, infra_dict):
             print(f"  • {bat.id_building} ({bat.type_batiment}) → "
                   f"prises={nb_prises} × 4 ouvriers | coût={cout_bat:,.0f}€ | durée={duree_bat:.1f}h")
 
+            # --- Marquer les prises comme réparées ---
+            for infra in bat.list_infras:
+                infra.nb_houses = 0
+
+        projet_cout_total += phase_cout_total
+        projet_duree_total += phase_duree_max  # si tu veux la somme de toutes les phases
+        projet_total_ouvriers += total_ouvriers
+
         print("\nRésumé de la phase :")
         print(f"  → Coût total estimé : {phase_cout_total:,.0f} €")
         print(f"  → Durée totale estimée : {phase_duree_max:.1f} h (la plus longue des réparations)")
         print(f"  → Ouvriers mobilisés : {total_ouvriers} (4 par prise)\n")
-
         print(f"Fin de la phase {phase_num}. Tous les bâtiments de la phase sont réparés simultanément.\n")
 
     print("=== FIN DES PHASES DE TRAVAUX ===\n")
+
+    # --- Résumé global du projet ---
+    print("=== RÉSUMÉ DU PROJET ===")
+    print(f"Coût total du projet : {projet_cout_total:,.0f} €")
+    print(f"Durée totale du projet : {projet_duree_total:.1f} h")
+    print(f"Total ouvriers mobilisés : {projet_total_ouvriers}\n")
 
 
 # ============================================================
