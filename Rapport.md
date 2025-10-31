@@ -80,6 +80,12 @@ Cette étape relie chaque entité géographique à ses attributs correspondants 
 
 ---
 
+
+
+
+
+
+
 ##  Références
 
 - [ESRI Shapefile Technical Description](https://www.esri.pdf  
