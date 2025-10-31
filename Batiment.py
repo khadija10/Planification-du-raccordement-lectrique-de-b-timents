@@ -27,9 +27,28 @@ class Batiment:
         """Durée théorique totale"""
         return sum(infra.get_infra_duration() for infra in self.list_infras if infra.infra_type == "a_remplacer")
 
+    # def get_real_duration(self) -> float:
+    #     """Durée réelle avec max 4 ouvriers par infra"""
+    #     return sum(infra.get_real_duration() for infra in self.list_infras if infra.infra_type == "a_remplacer")
+
     def get_real_duration(self) -> float:
-        """Durée réelle avec max 4 ouvriers par infra"""
-        return sum(infra.get_real_duration() for infra in self.list_infras if infra.infra_type == "a_remplacer")
+        """
+        Durée réelle du bâtiment :
+        - Chaque infra a jusqu'à 4 ouvriers (réduction du temps)
+        - La durée du bâtiment = durée de l'infra la plus longue
+        """
+        if not self.list_infras:
+            return 0.0
+
+        # Durée réelle de chaque infra
+        durees = [
+            infra.get_infra_duration() / 4  # maximum 4 ouvriers par infra
+            for infra in self.list_infras
+            if infra.infra_type == "a_remplacer"
+        ]
+
+        # Durée totale = durée de l'infra la plus longue
+        return max(durees) if durees else 0.0
 
     def get_total_cost(self) -> float:
         """Coût total = matériel + main d’œuvre"""
