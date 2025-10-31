@@ -4,7 +4,7 @@ Pour cette version on a pas toutes les informations
 * Dans l'énocé on parle de coût mais jusqu'ici on pas la vue la donnée concernant le coût
 * On aura aussi besion du temps si possible.
 
-#Plan du projet
+## Plan du projet
 * Coût, durée du projet de manière naive (un seul ouvrier sans tenir compte de sont salaire, sur le projet) sur la branche `main` avec son propre rapport
 * Coût, durée, nombre d'ouvrier sur le projet en separant sur 5 phases et dans chaque phase le travail est simultané sur la branche `feature/planification-phases` avec son rapport sur le projet.
 * Analyse du fichier csv avec l'ancienne et nouvelle data sur la branche `analyse_reseau_oumar`
