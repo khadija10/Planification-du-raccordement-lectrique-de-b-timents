@@ -1,0 +1,13 @@
+=== RAPPORT D’ANALYSE DU RÉSEAU (V2) ===
+Total connexions : 6107
+À remplacer : 577 (9.4%)
+Longueur moyenne : 29.3 m
+Efficacité moyenne : 0.071 maisons/m
+Mutualisation moyenne : 8.67 bâtiments/ligne
+
+ Graphiques générés dans le dossier 'data/' :
+- dist_longueurs_v2.png
+- dist_maisons_v2.png
+- dist_mutualisation_v2.png
+- dist_efficacite_v2.png
+- correlation_longueur_mutualisation_v2.png
